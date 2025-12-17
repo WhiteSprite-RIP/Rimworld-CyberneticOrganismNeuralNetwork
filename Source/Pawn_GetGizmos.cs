@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using HarmonyLib;
 using Verse;
 
@@ -8,26 +9,18 @@ namespace CONN
 	public static class Pawn_GetGizmos
 	{
 		[HarmonyPostfix]
-		private static IEnumerable<Gizmo> Postfix(IEnumerable<Gizmo> list, Pawn __instance)
+		private static void Postfix(Pawn __instance, ref IEnumerable<Gizmo> __result)
 		{
-			if (__instance.AnimalOrWildMan() || !__instance.InMentalState)
+			if (!__instance.InMentalState)
+				return;
+			
+			var hediffs = new List<HediffGizmoBerserk>();
+			__instance.health.hediffSet.GetHediffs(ref hediffs);
+			if (hediffs.Count > 0)
 			{
-				foreach (var gizmo in list)
-				{
-					yield return gizmo;
-				}
-			}
-			else
-			{
-				var result = new List<HediffGizmoBerserk>();
-				__instance.health.hediffSet.GetHediffs(ref result);
-				foreach (var t in result)
-				{
-					foreach (var g in t.GetGizmos())
-					{
-						yield return g;
-					}
-				}
+				var extraGizmos = hediffs.SelectMany(b => b.GetGizmos()).ToArray();
+				if (extraGizmos.Length > 0)
+					__result = __result.Concat(extraGizmos);
 			}
 		}
 	}
